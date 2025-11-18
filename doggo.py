@@ -40,6 +40,14 @@ class Doggo:
             Tool("sleep", "Put the doggo to sleep", "tools/sleep.json", lambda _: self.toggle_sleep(True), awake=False),
         ]
 
+        self.asleep_prompt, self.awake_prompt = None, None
+
+        with open("prompts/asleep.md", "r") as f:
+            self.asleep_prompt = f.read()
+
+        with open("prompts/awake.md", "r") as f:
+            self.awake_prompt = f.read()
+
     def toggle_sleep(self, sleep):
         self.awake = sleep
         if sleep:
@@ -48,10 +56,8 @@ class Doggo:
 
     def system_prompt(self):
         if self.awake:
-            with open("prompts/awake.md", "r") as f:
-                return f.read()
-        with open("prompts/asleep.md", "r") as f:
-            return f.read()
+            return self.awake_prompt
+        return self.asleep_prompt
 
     def valid_tools(self):
         return [tool for tool in self.tools if tool.awake == self.awake]
@@ -145,7 +151,6 @@ class Doggo:
             if chunk:
                 mp3_bytes.write(chunk)
         mp3_bytes.seek(0)
-
 
         data, samplerate = sf.read(mp3_bytes)
         sd.play(data, samplerate)
