@@ -16,15 +16,15 @@ sd.default.samplerate = 16000
 
 class Tool:
     def __init__(self, name, description, filepath, callback, awake = True):
-        self.name = name
+        self.name        = name
         self.description = description
-        self.filepath = filepath
-        self.callback = callback
-        self.awake = awake
-
-    def spec(self):
+        self.filepath    = filepath
+        self.callback    = callback
+        self.awake       = awake
+        self.spec        = None
+    
         with open(self.filepath, "r") as f:
-            return json.load(f)
+            self.spec = json.load(f)
 
 class Doggo:
     awake = True
@@ -78,7 +78,7 @@ class Doggo:
                 "function": {
                     "name": tool.name, 
                     "description": tool.description, 
-                    "parameters": tool.spec()
+                    "parameters": tool.spec
                 }
             } for tool in tools]
         )
@@ -96,7 +96,7 @@ class Doggo:
                     "name": tool_call.function.name,
                     "arguments": tool_call.function.arguments
                 }
-            }]
+            } for tool_call in choice.message.tool_calls]
             messages.append({"role": "assistant", "tool_calls": call_messages})
             for tool_call in choice.message.tool_calls:
                 print("tool call: ", tool_call)
