@@ -156,7 +156,6 @@ def loop():
         text = dog.listen()
         if text:
             dog.think(text)
-        break
 
 if __name__ == '__main__':
     loop()
