@@ -86,6 +86,7 @@ class Doggo:
         choice = response.choices[0]
 
         if choice.message.content:
+            messages.append({"role": "assistant", "content": choice.message.content})
             self.speak(choice.message.content)
 
         if choice.message.tool_calls:
@@ -97,6 +98,7 @@ class Doggo:
                     "arguments": tool_call.function.arguments
                 }
             } for tool_call in choice.message.tool_calls]
+
             messages.append({"role": "assistant", "tool_calls": call_messages})
             for tool_call in choice.message.tool_calls:
                 print("tool call: ", tool_call)
