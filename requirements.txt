@@ -1,0 +1,6 @@
+openai-whisper @ git+https://github.com/openai/whisper.git@c0d2f624c09dc18e709e37c2ad90c039a4eb72a2
+sounddevice==0.5.3
+openai
+soundfile
+elevenlabs
+pydub
