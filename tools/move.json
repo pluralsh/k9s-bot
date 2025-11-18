@@ -1,0 +1,18 @@
+{
+    "type": "object",
+    "properties": {
+        "x": {
+            "type": "number",
+            "description": "the x coordinate to move to"
+        },
+        "y": {
+            "type": "number",
+            "description": "the y coordinate to move to"
+        },
+        "z": {
+            "type": "number",
+            "description": "the z coordinate to move to"
+        }
+    },
+    "required": ["x", "y", "z"]
+}

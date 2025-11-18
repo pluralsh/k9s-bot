@@ -1,4 +1,5 @@
 import openai
+import asyncio
 import sounddevice as sd
 import soundfile as sf
 import elevenlabs
@@ -6,9 +7,15 @@ import whisper
 import tempfile
 import os
 import json
+from unitree_webrtc_connect.webrtc_driver import (
+    UnitreeWebRTCConnection,
+    WebRTCConnectionMethod,
+)
+from unitree_webrtc_connect.constants import RTC_TOPIC, SPORT_CMD
 
 from io import BytesIO
 
+ROBOT_IP = "192.168.50.191"
 
 OPENAI_MODEL = "gpt-4.1-mini"
 RECORDING_DURATION = 5
@@ -25,6 +32,9 @@ class Tool:
     
         with open(self.filepath, "r") as f:
             self.spec = json.load(f)
+    
+    async def run(self, params):
+        return await self.callback(params)
 
 class Doggo:
     awake = True
@@ -32,12 +42,17 @@ class Doggo:
 
     def __init__(self, alive = True):
         self.alive = alive
+        self.robot = UnitreeWebRTCConnection(WebRTCConnectionMethod.LocalSTA, ip=ROBOT_IP)
         # self.model = whisper.load_model("tiny.en")
         self.elevenlabs = elevenlabs.ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
         self.openai = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.tools = [
             Tool("awake", "Wake up the doggo", "tools/awake.json", lambda _: self.toggle_sleep(False)),
             Tool("sleep", "Put the doggo to sleep", "tools/sleep.json", lambda _: self.toggle_sleep(True), awake=False),
+            Tool("move", "Move the doggo by an x, y, and z coordinate", "tools/move.json", self.move),
+            Tool("stand_up", "Stand up the doggo", "tools/empty.json", self.stand_up),
+            Tool("lie_down", "Have the doggo lie down", "tools/empty.json", self.damp),
+            Tool("hello", "The doggo says hello", "tools/empty.json", self.hello),
         ]
 
         self.asleep_prompt, self.awake_prompt = None, None
@@ -48,6 +63,44 @@ class Doggo:
         with open("prompts/awake.md", "r") as f:
             self.awake_prompt = f.read()
 
+    async def connect_robot(self):
+        await self.robot.connect()
+
+    async def stand_up(self, _):
+        await self.maybe_reconnect()
+        await self.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["StandUp"]}
+        )
+        return "Doggo is now standing up"
+    
+    async def damp(self, _):
+        await self.maybe_reconnect()
+        await self.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Damp"]}
+        )
+        return "Doggo is now damping"
+    
+    async def hello(self, _):
+        await self.maybe_reconnect()
+        await self.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Hello"]}
+        )
+        return "Doggo is now saying hello"
+    
+    async def move(self, params):
+        await self.maybe_reconnect()
+        await self.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Move"], "parameter": params}
+        )
+        return "Doggo is now moving"
+    
+    async def stop(self, _):
+        await self.maybe_reconnect()
+        await self.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Stop"]}
+        )
+        return "Doggo is now stopping"
+    
     def toggle_sleep(self, sleep):
         self.awake = sleep
         if sleep:
@@ -62,7 +115,7 @@ class Doggo:
     def valid_tools(self):
         return [tool for tool in self.tools if tool.awake == self.awake]
 
-    def think(self, text):
+    async def think(self, text):
         print("Thinking about: ", text)
         messages = [
             {"role": "system", "content": self.system_prompt()},
@@ -70,10 +123,10 @@ class Doggo:
         ]
 
         i = 0
-        while self.run_completion(messages) and self.awake and i < 5:
+        while await self.run_completion(messages) and self.awake and i < 5:
             i += 1
         
-    def run_completion(self, messages):
+    async def run_completion(self, messages):
         tools = self.valid_tools()
         by_name = {tool.name: tool for tool in tools}
         response = self.openai.chat.completions.create(
@@ -109,12 +162,15 @@ class Doggo:
             for tool_call in choice.message.tool_calls:
                 print("tool call: ", tool_call)
                 tool = by_name[tool_call.function.name]
-                result = tool.callback(tool_call.function.arguments)
+                result = await tool.run(tool_call.function.arguments)
                 messages.append({"role": "tool", "content": result, "tool_call_id": tool_call.id})
                 return True
 
         return False
-        
+
+    async def maybe_reconnect(self):
+        if not self.robot.isConnected:
+            await self.robot.reconnect()
     
     def listen(self):
         if not self.alive:
@@ -156,14 +212,15 @@ class Doggo:
         sd.play(data, samplerate)
         sd.wait()
 
-def loop():
+async def loop():
     dog = Doggo()
+    await dog.connect_robot()
     print("Starting doggo, listening on audio input...")
     while True:
         text = dog.listen()
         if text:
-            dog.think(text)
+            await dog.think(text)
 
 if __name__ == '__main__':
-    loop()
+    asyncio.run(loop())
 
