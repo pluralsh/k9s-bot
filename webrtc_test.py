@@ -9,7 +9,7 @@ from unitree_webrtc_connect.webrtc_driver import (
 from unitree_webrtc_connect.constants import RTC_TOPIC, SPORT_CMD
 
 # Enable logging for debugging (change to logging.INFO to see more details)
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.DEBUG)
 
 ROBOT_IP = "192.168.50.191"
 
@@ -41,7 +41,11 @@ async def main():
                     line += f"|  {c2_name:<20} {c2_id:<5}"
                 print(line)
 
-            cmd_input = input("\nEnter command: ").strip()
+            # Run input in executor to avoid blocking the event loop (kills heartbeats)
+            cmd_input = await asyncio.get_running_loop().run_in_executor(
+                None, input, "\nEnter command: "
+            )
+            cmd_input = cmd_input.strip()
 
             if not cmd_input:
                 continue
