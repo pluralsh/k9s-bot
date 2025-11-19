@@ -53,10 +53,12 @@ class Doggo:
     def __init__(self, voice="burt", alive=True):
         self.voice_id = VOICES[voice]
         self.alive = alive
-        self.robot = UnitreeWebRTCConnection(
-            WebRTCConnectionMethod.LocalSTA, ip=ROBOT_IP
-        )
-        # self.model = whisper.load_model("tiny.en")
+        self.robot = None
+        if self.alive:
+            self.robot = UnitreeWebRTCConnection(
+                WebRTCConnectionMethod.LocalSTA, ip=ROBOT_IP
+            )
+
         self.elevenlabs = elevenlabs.ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
         self.openai = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.tools = [
@@ -93,7 +95,8 @@ class Doggo:
             self.awake_prompt = f.read()
 
     async def connect_robot(self):
-        await self.robot.connect()
+        if self.robot:
+            await self.robot.connect()
 
     async def stand_up(self, _):
         await self.maybe_reconnect()
