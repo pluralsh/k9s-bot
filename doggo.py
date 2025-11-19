@@ -245,6 +245,7 @@ class Doggo:
         await loop.run_in_executor(None, self._speak_sync, text)
 
     def _speak_sync(self, text):
+        click.echo("Speaking: ", text)
         response = self.elevenlabs.text_to_speech.convert(
             voice_id=self.voice_id,
             output_format="mp3_22050_32",
@@ -270,6 +271,7 @@ async def loop(dog):
     while True:
         text = await dog.listen()
         if text:
+            click.echo("Heard: ", text)
             await dog.think(text)
 
 
