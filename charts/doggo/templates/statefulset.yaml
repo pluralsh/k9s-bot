@@ -6,6 +6,8 @@ metadata:
     {{- include "doggo.labels" . | nindent 4 }}
 spec:
   replicas: 1
+  updateStrategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       {{- include "doggo.selectorLabels" . | nindent 6 }}

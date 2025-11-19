@@ -8,6 +8,7 @@ import tempfile
 import os
 import json
 import click
+import librosa
 from unitree_webrtc_connect.webrtc_driver import (
     UnitreeWebRTCConnection,
     WebRTCConnectionMethod,
@@ -20,7 +21,7 @@ ROBOT_IP = "192.168.50.191"
 
 OPENAI_MODEL = "gpt-4.1-mini"
 RECORDING_DURATION = 5
-sd.default.samplerate = 16000
+# sd.default.samplerate = 16000
 
 VOICES = {
     "burt": "4YYIPFl9wE5c4L2eu2Gb",
@@ -218,8 +219,10 @@ class Doggo:
 
     def _listen_sync(self):
         print("Listening...")
-        audio = sd.rec(int(RECORDING_DURATION * sd.default.samplerate), channels=1)
+        audio = sd.rec(int(RECORDING_DURATION * sd.default.samplerate), channels=1, samplerate=sd.default.samplerate)
         sd.wait()
+
+        audio = librosa.resample(audio, orig_sr=sd.default.samplerate, target_sr=16000)
 
         bytes_io = BytesIO()
         bytes_io.name = "audio.mp3"
@@ -279,10 +282,14 @@ async def loop(dog):
 @click.option("--voice", type=click.Choice(VOICES.keys()), default="burt")
 @click.option("--alive/--dead", is_flag=True, default=True)
 @click.option("--configure-input/--no-configure-input", is_flag=True, default=False)
-def main(voice, alive, configure_input):
+@click.option("--sample-rate", type=int, default=44100)
+def main(voice, alive, configure_input, sample_rate):
     if configure_input:
         sd.default.device = ("USB PnP", "UACDemo")
+    if sample_rate > 0:
+        sd.default.samplerate = sample_rate
     devices = sd.query_devices()
+    print("Number of devices: ", len(devices))
     print("Devices: ", json.dumps(devices, indent=2))
 
     dog = Doggo(voice, alive)
