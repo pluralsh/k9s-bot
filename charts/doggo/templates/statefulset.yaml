@@ -1,14 +1,11 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "doggo.fullname" . }}
   labels:
     {{- include "doggo.labels" . | nindent 4 }}
 spec:
   replicas: 1
-  strategy:
-    type: Recreate
-    rollingUpdate: null
   selector:
     matchLabels:
       {{- include "doggo.selectorLabels" . | nindent 6 }}
