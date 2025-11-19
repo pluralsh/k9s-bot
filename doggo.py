@@ -281,7 +281,7 @@ async def loop(dog):
 @click.option("--configure-input/--no-configure-input", is_flag=True, default=False)
 def main(voice, alive, configure_input):
     if configure_input:
-        sd.default.device = ("UACDemo", "USB PnP")
+        sd.default.device = ("USB PnP", "UACDemo")
     devices = sd.query_devices()
     print("Devices: ", json.dumps(devices, indent=2))
 
