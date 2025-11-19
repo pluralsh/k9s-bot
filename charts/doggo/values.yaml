@@ -1,4 +1,12 @@
 # Default values for doggo.
+
+doggo:
+  # The voice to use for the doggo
+  voice: "burt"
+  # Whether the doggo is alive
+  alive: true
+  # The IP address of the robot
+  robotIp: "192.168.1.100"
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
