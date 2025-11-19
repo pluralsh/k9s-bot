@@ -37,25 +37,17 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           envFrom:
-            - secretRef:
-                name: doggo-secrets
+          - secretRef:
+              name: doggo-secrets
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            - --voice={{ .Values.doggo.voice }}
-            {{ if .Values.doggo.alive }}
-            - --alive
-            {{ else }}
-            - --dead
-            {{ end }}
-          # {{- with .Values.livenessProbe }}
-          # livenessProbe:
-          #   {{- toYaml . | nindent 12 }}
-          # {{- end }}
-          # {{- with .Values.readinessProbe }}
-          # readinessProbe:
-          #   {{- toYaml . | nindent 12 }}
-          # {{- end }}
+          - --voice={{ .Values.doggo.voice }}
+          {{ if .Values.doggo.alive }}
+          - "--alive"
+          {{ else }}
+          - "--dead"
+          {{ end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
