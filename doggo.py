@@ -198,7 +198,7 @@ class Doggo:
                 messages.append(
                     {"role": "tool", "content": result, "tool_call_id": tool_call.id}
                 )
-                return True
+            return True
 
         return False
 
