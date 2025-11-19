@@ -48,6 +48,9 @@ spec:
           {{ else }}
           - "--dead"
           {{ end }}
+          {{ if .Values.doggo.configureInput }}
+          - "--configure-input"
+          {{ end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
