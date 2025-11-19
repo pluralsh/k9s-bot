@@ -278,10 +278,13 @@ async def loop(dog):
 @click.command()
 @click.option("--voice", type=click.Choice(VOICES.keys()), default="burt")
 @click.option("--alive/--dead", is_flag=True, default=True)
-def main(voice, alive):
-    # sd.default.device = ("USB PnP", "UACDemo")
+@click.option("--configure-input/--no-configure-input", is_flag=True, default=False)
+def main(voice, alive, configure_input):
+    if configure_input:
+        sd.default.device = ("UACDemo", "USB PnP")
     devices = sd.query_devices()
     print("Devices: ", json.dumps(devices, indent=2))
+
     dog = Doggo(voice, alive)
     asyncio.run(loop(dog))
 
