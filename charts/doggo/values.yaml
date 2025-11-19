@@ -83,7 +83,7 @@ autoscaling:
 volumes:
 - name: hostpath-volume
   hostPath:
-    path: /dev/ttyUSB1
+    path: /dev/bus/usb
 # - name: foo
 #   secret:
 #     secretName: mysecret
@@ -92,7 +92,7 @@ volumes:
 # Additional volumeMounts on the output Deployment definition.
 volumeMounts:
 - name: hostpath-volume
-  mountPath: /dev/ttyUSB1
+  mountPath: /dev/bus/usb
 # - name: foo
 #   mountPath: "/etc/foo"
 #   readOnly: true
