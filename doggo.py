@@ -7,6 +7,7 @@ import whisper
 import tempfile
 import os
 import json
+import click
 from unitree_webrtc_connect.webrtc_driver import (
     UnitreeWebRTCConnection,
     WebRTCConnectionMethod,
@@ -20,6 +21,13 @@ ROBOT_IP = "192.168.50.191"
 OPENAI_MODEL = "gpt-4.1-mini"
 RECORDING_DURATION = 5
 sd.default.samplerate = 16000
+
+VOICES = {
+    'burt': '4YYIPFl9wE5c4L2eu2Gb',
+    'drill_seargent': 'DGzg6RaUqxGRTHSBjfgF',
+    "knox": 'dPah2VEoifKnZT37774q',
+    'pirate': 'PPzYpIqttlTYA83688JI'
+}
 
 class Tool:
     def __init__(self, name, description, filepath, callback, awake = True):
@@ -40,7 +48,8 @@ class Doggo:
     awake = True
     alive = True
 
-    def __init__(self, alive = True):
+    def __init__(self, voice='burt', alive = True):
+        self.voice_id = VOICES[voice]
         self.alive = alive
         self.robot = UnitreeWebRTCConnection(WebRTCConnectionMethod.LocalSTA, ip=ROBOT_IP)
         # self.model = whisper.load_model("tiny.en")
@@ -116,7 +125,6 @@ class Doggo:
         return [tool for tool in self.tools if tool.awake == self.awake]
 
     async def think(self, text):
-        print("Thinking about: ", text)
         messages = [
             {"role": "system", "content": self.system_prompt()},
             {"role": "user", "content": text}
@@ -141,7 +149,6 @@ class Doggo:
                 }
             } for tool in tools]
         )
-        print("Response: ", response)
         choice = response.choices[0]
 
         if choice.message.content:
@@ -160,7 +167,6 @@ class Doggo:
 
             messages.append({"role": "assistant", "tool_calls": call_messages})
             for tool_call in choice.message.tool_calls:
-                print("tool call: ", tool_call)
                 tool = by_name[tool_call.function.name]
                 result = await tool.run(tool_call.function.arguments)
                 messages.append({"role": "tool", "content": result, "tool_call_id": tool_call.id})
@@ -189,13 +195,11 @@ class Doggo:
             model_id="scribe_v1",
             language_code="en"  # or whichever model you require
         )
-        print("Doggo heard: ", result)
         return result.text
 
     def speak(self, text):
-        print("Speaking: ", text)
         response = self.elevenlabs.text_to_speech.convert(
-            voice_id="4YYIPFl9wE5c4L2eu2Gb", # Burt Reynolds
+            voice_id=self.voice_id,
             output_format="mp3_22050_32",
             text=text,
             model_id="eleven_turbo_v2_5",
@@ -212,15 +216,21 @@ class Doggo:
         sd.play(data, samplerate)
         sd.wait()
 
-async def loop():
-    dog = Doggo()
+async def loop(dog):
     await dog.connect_robot()
-    print("Starting doggo, listening on audio input...")
+    click.echo("Starting doggo, listening on audio input...")
     while True:
         text = dog.listen()
         if text:
             await dog.think(text)
 
+@click.command()
+@click.option('--voice', type=click.Choice(VOICES.keys()), default='burt')
+@click.option('--alive', is_flag=True, default=True)
+def main(voice, alive):
+    dog = Doggo(voice, alive)
+    asyncio.run(loop(dog))
+
 if __name__ == '__main__':
-    asyncio.run(loop())
+    main()
 

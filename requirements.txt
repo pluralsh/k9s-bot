@@ -4,5 +4,6 @@ openai
 soundfile
 elevenlabs
 pydub
+click
 unitree_webrtc_connect @ git+https://github.com/pluralsh/unitree_webrtc_connect.git@master
 
