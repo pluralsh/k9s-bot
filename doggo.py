@@ -279,6 +279,8 @@ async def loop(dog):
 @click.option("--voice", type=click.Choice(VOICES.keys()), default="burt")
 @click.option("--alive/--dead", is_flag=True, default=True)
 def main(voice, alive):
+    devices = sd.query_devices()
+    print("Devices: ", json.dumps(devices, indent=2))
     dog = Doggo(voice, alive)
     asyncio.run(loop(dog))
 
