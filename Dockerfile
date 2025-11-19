@@ -23,5 +23,7 @@ COPY prompts ./prompts
 COPY tools ./tools
 
 # Run the application
-CMD ["python", "doggo.py"]
+ENTRYPOINT ["python", "doggo.py"]
+CMD ["--voice", "burt", "--alive"]
+
 
