@@ -48,6 +48,9 @@ class Tool:
 
 class Trick:
     def __init__(self, dog, name, description, file):
+        self.name = name
+        self.description = description
+        self.file = file
         self.dog = dog
     
     async def act(self, params):
@@ -57,7 +60,7 @@ class Trick:
         return Tool(
             name=self.name,
             description=self.description,
-            parameters=self.parameters,
+            filepath=self.file,
             callback=self.act,
             awake=True,
         )
