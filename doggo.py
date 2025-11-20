@@ -62,7 +62,7 @@ class Trick:
         if params:
             args["parameter"] = params
 
-        async def _call():
+        def _call():
             await self.dog.maybe_reconnect()
             await self.dog.robot.datachannel.pub_sub.publish_request_new(
                 RTC_TOPIC["SPORT_MOD"], args
@@ -181,13 +181,13 @@ class Doggo:
                 "Wake up the doggo",
                 "tools/awake.json",
                 lambda _: self.toggle_sleep(False),
+                awake=False,
             ),
             Tool(
                 "sleep",
                 "Put the doggo to sleep",
                 "tools/sleep.json",
-                lambda _: self.toggle_sleep(True),
-                awake=False,
+                lambda _: self.toggle_sleep(True)
             )
         ]
         self.tools.extend(trick_tools(self))
