@@ -60,6 +60,9 @@ spec:
           {{ if .Values.doggo.outputDevice }}
           - "--output-device={{ .Values.doggo.outputDevice }}"
           {{ end }}
+          {{ if .Values.doggo.echo }}
+          - "--echo"
+          {{ end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}

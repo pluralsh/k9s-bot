@@ -51,10 +51,11 @@ class Doggo:
     awake = True
     alive = True
 
-    def __init__(self, voice="burt", alive=True, output_sample_rate=48000):
+    def __init__(self, voice="burt", alive=True, output_sample_rate=48000, echo=False):
         self.voice_id = VOICES[voice]
         self.alive = alive
         self.robot = None
+        self.echo = echo
         self.output_sample_rate = output_sample_rate
 
         if self.alive:
@@ -224,6 +225,9 @@ class Doggo:
         audio = sd.rec(int(RECORDING_DURATION * sd.default.samplerate), channels=1, samplerate=sd.default.samplerate)
         sd.wait()
 
+        if self.echo:
+            sd.play(audio, sd.default.samplerate)
+            sd.wait()
         # if sd.default.samplerate != 16000:
         #     audio = librosa.resample(audio, orig_sr=sd.default.samplerate, target_sr=16000)
 
@@ -294,7 +298,8 @@ async def loop(dog):
 @click.option("--output-sample-rate", type=int, default=0)
 @click.option("--input-device", type=str, default="USB PnP")
 @click.option("--output-device", type=str, default="UACDemo")
-def main(voice, alive, configure_input, sample_rate, output_sample_rate, input_device, output_device):
+@click.option("--echo/--no-echo", is_flag=True, default=False)
+def main(voice, alive, configure_input, sample_rate, output_sample_rate, input_device, output_device, echo):
     if configure_input:
         sd.default.device = (input_device, output_device)
     if sample_rate > 0:
@@ -303,7 +308,7 @@ def main(voice, alive, configure_input, sample_rate, output_sample_rate, input_d
     print("Number of devices: ", len(devices))
     print("Devices: ", json.dumps(devices, indent=2))
 
-    dog = Doggo(voice, alive, output_sample_rate)
+    dog = Doggo(voice, alive, output_sample_rate, echo)
     asyncio.run(loop(dog))
 
 
