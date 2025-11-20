@@ -63,7 +63,7 @@ class Trick:
             args["parameter"] = params
 
         await self.dog.maybe_reconnect()
-        self.dog.robot.datachannel.pub_sub.publish_request_new(
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
             RTC_TOPIC["SPORT_MOD"], args
         )
 
