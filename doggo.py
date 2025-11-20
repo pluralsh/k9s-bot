@@ -28,8 +28,10 @@ VOICES = {
     "drill_seargent": "DGzg6RaUqxGRTHSBjfgF",
     "knox": "dPah2VEoifKnZT37774q",
     "pirate": "PPzYpIqttlTYA83688JI",
+    "michael": "ldTgmMTsxAK2Vs3NZO03"
 }
 
+from unitree_webrtc_connect.constants import RTC_TOPIC, SPORT_CMD
 
 class Tool:
     def __init__(self, name, description, filepath, callback, awake=True):
@@ -46,12 +48,93 @@ class Tool:
     async def run(self, params):
         return await self.callback(params)
 
+class Trick:
+    def __init__(self, dog, name, description, file):
+        self.dog = dog
+    
+    async def act(self, params):
+        pass
+
+    def tool(self):
+        return Tool(
+            name=self.name,
+            description=self.description,
+            parameters=self.parameters,
+            callback=self.act,
+            awake=True,
+        )
+
+
+class StandUp(Trick):
+    def __init__(self, dog):
+        super().__init__(dog, "stand_up", "Make the dog stand up", "tools/stand_up.json")
+
+    async def act(self, params):
+        await self.dog.maybe_reconnect()
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["StandUp"]}
+        )
+        return "Doggo is now standing up"
+
+class Damp(Trick):
+    def __init__(self, dog):
+        super().__init__(dog, "lie_down", "Make the dog lie down", "tools/lie_down.json")
+
+    async def act(self, params):
+        await self.dog.maybe_reconnect()
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Damp"]}
+        )
+        return "Doggo is now damping"
+
+class Hello(Trick):
+    def __init__(self, dog):
+        super().__init__(dog, "hello", "Make the dog say hello", "tools/hello.json")
+
+    async def act(self, params):
+        await self.dog.maybe_reconnect()
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Hello"]}
+        )
+        return "Doggo is now saying hello"
+
+class Move(Trick):
+    def __init__(self, dog):
+        super().__init__(dog, "move", "Make the dog move", "tools/move.json")
+
+    async def act(self, params):
+        await self.dog.maybe_reconnect()
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Move"], "parameter": params}
+        )
+        return "Doggo is now moving"
+
+class Stop(Trick):
+    def __init__(self, dog):
+        super().__init__(dog, "stop", "Make the dog stop", "tools/stop.json")
+
+    async def act(self, params):
+        await self.dog.maybe_reconnect()
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Stop"]}
+        )
+        return "Doggo is now stopping"
+
+def trick_tools(dog):
+    tricks = [
+        StandUp(dog),
+        Damp(dog),
+        Hello(dog),
+        Move(dog),
+        Stop(dog),
+    ]
+    return [trick.tool() for trick in tricks]
 
 class Doggo:
     awake = True
     alive = True
 
-    def __init__(self, voice="burt", alive=True, output_sample_rate=48000, echo=False):
+    def __init__(self, voice="michael", alive=True, output_sample_rate=48000, echo=False):
         self.voice_id = VOICES[voice]
         self.alive = alive
         self.robot = None
@@ -78,17 +161,9 @@ class Doggo:
                 "tools/sleep.json",
                 lambda _: self.toggle_sleep(True),
                 awake=False,
-            ),
-            Tool(
-                "move",
-                "Move the doggo by an x, y, and z coordinate",
-                "tools/move.json",
-                self.move,
-            ),
-            Tool("stand_up", "Stand up the doggo", "tools/empty.json", self.stand_up),
-            Tool("lie_down", "Have the doggo lie down", "tools/empty.json", self.damp),
-            Tool("hello", "The doggo says hello", "tools/empty.json", self.hello),
+            )
         ]
+        self.tools.extend(trick_tools(self))
 
         self.asleep_prompt, self.awake_prompt = None, None
 
@@ -101,41 +176,6 @@ class Doggo:
     async def connect_robot(self):
         if self.robot:
             await self.robot.connect()
-
-    async def stand_up(self, _):
-        await self.maybe_reconnect()
-        await self.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["StandUp"]}
-        )
-        return "Doggo is now standing up"
-
-    async def damp(self, _):
-        await self.maybe_reconnect()
-        await self.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Damp"]}
-        )
-        return "Doggo is now damping"
-
-    async def hello(self, _):
-        await self.maybe_reconnect()
-        await self.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Hello"]}
-        )
-        return "Doggo is now saying hello"
-
-    async def move(self, params):
-        await self.maybe_reconnect()
-        await self.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Move"], "parameter": params}
-        )
-        return "Doggo is now moving"
-
-    async def stop(self, _):
-        await self.maybe_reconnect()
-        await self.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Stop"]}
-        )
-        return "Doggo is now stopping"
 
     def toggle_sleep(self, sleep):
         self.awake = sleep
@@ -291,7 +331,7 @@ async def loop(dog):
 
 
 @click.command()
-@click.option("--voice", type=click.Choice(VOICES.keys()), default="burt")
+@click.option("--voice", type=click.Choice(VOICES.keys()), default="michael")
 @click.option("--alive/--dead", is_flag=True, default=True)
 @click.option("--configure-input/--no-configure-input", is_flag=True, default=False)
 @click.option("--sample-rate", type=int, default=44100)
