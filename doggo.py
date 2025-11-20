@@ -62,13 +62,10 @@ class Trick:
         if params:
             args["parameter"] = params
 
-        async def _call():
-            await self.dog.maybe_reconnect()
-            await self.dog.robot.datachannel.pub_sub.publish_request_new(
-                RTC_TOPIC["SPORT_MOD"], args
-            )
-
-        asyncio.create_task(_call())
+        await self.dog.maybe_reconnect()
+        self.dog.robot.datachannel.pub_sub.publish_request_new(
+            topic=RTC_TOPIC["SPORT_MOD"], args
+        )
 
     def tool(self):
         return Tool(
@@ -323,6 +320,9 @@ class Doggo:
         await loop.run_in_executor(None, self._speak_sync, text)
 
     def _speak_sync(self, text):
+        if not self.awake:
+            return
+        
         print("Speaking: ", text)
         response = self.elevenlabs.text_to_speech.convert(
             voice_id=self.voice_id,
