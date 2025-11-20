@@ -62,10 +62,13 @@ class Trick:
         if params:
             args["parameter"] = params
 
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], args
-        )
+        def _call():
+            await self.dog.maybe_reconnect()
+            await self.dog.robot.datachannel.pub_sub.publish_request_new(
+                RTC_TOPIC["SPORT_MOD"], args
+            )
+
+        asyncio.create_task(_call())
 
     def tool(self):
         return Tool(
