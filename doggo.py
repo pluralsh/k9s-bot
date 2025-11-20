@@ -292,9 +292,11 @@ async def loop(dog):
 @click.option("--configure-input/--no-configure-input", is_flag=True, default=False)
 @click.option("--sample-rate", type=int, default=44100)
 @click.option("--output-sample-rate", type=int, default=0)
-def main(voice, alive, configure_input, sample_rate, output_sample_rate):
+@click.option("--input-device", type=str, default="USB PnP")
+@click.option("--output-device", type=str, default="UACDemo")
+def main(voice, alive, configure_input, sample_rate, output_sample_rate, input_device, output_device):
     if configure_input:
-        sd.default.device = ("USB PnP", "UACDemo")
+        sd.default.device = (input_device, output_device)
     if sample_rate > 0:
         sd.default.samplerate = sample_rate
     devices = sd.query_devices()
