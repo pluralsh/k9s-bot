@@ -51,10 +51,12 @@ class Doggo:
     awake = True
     alive = True
 
-    def __init__(self, voice="burt", alive=True):
+    def __init__(self, voice="burt", alive=True, output_sample_rate=48000):
         self.voice_id = VOICES[voice]
         self.alive = alive
         self.robot = None
+        self.output_sample_rate = output_sample_rate
+
         if self.alive:
             self.robot = UnitreeWebRTCConnection(
                 WebRTCConnectionMethod.LocalSTA, ip=ROBOT_IP
@@ -265,7 +267,10 @@ class Doggo:
         mp3_bytes.seek(0)
 
         data, samplerate = sf.read(mp3_bytes)
-        sd.play(data, samplerate)
+        if self.output_sample_rate > 0:
+            print("Resampling from ", samplerate, " to ", self.output_sample_rate)
+            data = librosa.resample(data, orig_sr=samplerate, target_sr=self.output_sample_rate)
+        sd.play(data, self.output_sample_rate or samplerate)
         sd.wait()
 
 
@@ -284,7 +289,8 @@ async def loop(dog):
 @click.option("--alive/--dead", is_flag=True, default=True)
 @click.option("--configure-input/--no-configure-input", is_flag=True, default=False)
 @click.option("--sample-rate", type=int, default=44100)
-def main(voice, alive, configure_input, sample_rate):
+@click.option("--output-sample-rate", type=int, default=0)
+def main(voice, alive, configure_input, sample_rate, output_sample_rate):
     if configure_input:
         sd.default.device = ("USB PnP", "UACDemo")
     if sample_rate > 0:
@@ -293,7 +299,7 @@ def main(voice, alive, configure_input, sample_rate):
     print("Number of devices: ", len(devices))
     print("Devices: ", json.dumps(devices, indent=2))
 
-    dog = Doggo(voice, alive)
+    dog = Doggo(voice, alive, output_sample_rate)
     asyncio.run(loop(dog))
 
 
