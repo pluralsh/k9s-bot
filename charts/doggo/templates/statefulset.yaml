@@ -53,6 +53,9 @@ spec:
           {{ if .Values.doggo.configureInput }}
           - "--configure-input"
           {{ end }}
+          {{ if .Values.doggo.outputSampleRate }}
+          - "--output-sample-rate={{ .Values.doggo.outputSampleRate }}"
+          {{ end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
