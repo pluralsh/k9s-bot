@@ -20,7 +20,7 @@ from io import BytesIO
 ROBOT_IP = "192.168.50.191"
 
 OPENAI_MODEL = "gpt-4.1-mini"
-RECORDING_DURATION = 5
+RECORDING_DURATION = 2
 # sd.default.samplerate = 16000
 
 VOICES = {
