@@ -129,7 +129,7 @@ class Dance(Trick):
     async def act(self, params):
         await self.dog.maybe_reconnect()
         await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Dance"]}
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Dance1"]}
         )
         return "Doggo is now dancing"
 
