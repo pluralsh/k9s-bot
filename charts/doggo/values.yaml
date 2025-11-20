@@ -11,6 +11,8 @@ doggo:
   configureInput: false
   # whether to echo the audio input to the speaker (for debugging)
   echo: false
+  # explicitly set the input sample rate
+  inputSampleRate: ~
   # explicitly set the output sample rate for the speaker device
   outputSampleRate: ~
 

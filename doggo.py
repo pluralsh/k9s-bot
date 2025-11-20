@@ -332,16 +332,16 @@ async def loop(dog):
 @click.option("--voice", type=click.Choice(VOICES.keys()), default="michael")
 @click.option("--alive/--dead", is_flag=True, default=True)
 @click.option("--configure-input/--no-configure-input", is_flag=True, default=False)
-@click.option("--sample-rate", type=int, default=44100)
+@click.option("--input-sample-rate", type=int, default=44100)
 @click.option("--output-sample-rate", type=int, default=0)
 @click.option("--input-device", type=str, default="USB PnP")
 @click.option("--output-device", type=str, default="UACDemo")
 @click.option("--echo/--no-echo", is_flag=True, default=False)
-def main(voice, alive, configure_input, sample_rate, output_sample_rate, input_device, output_device, echo):
+def main(voice, alive, configure_input, input_sample_rate, output_sample_rate, input_device, output_device, echo):
     if configure_input:
         sd.default.device = (input_device, output_device)
-    if sample_rate > 0:
-        sd.default.samplerate = sample_rate
+    if input_sample_rate > 0:
+        sd.default.samplerate = input_sample_rate
     devices = sd.query_devices()
     print("Number of devices: ", len(devices))
     print("Devices: ", json.dumps(devices, indent=2))

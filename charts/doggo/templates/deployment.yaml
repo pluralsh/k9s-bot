@@ -51,6 +51,9 @@ spec:
           {{ if .Values.doggo.configureInput }}
           - "--configure-input"
           {{ end }}
+          {{ if .Values.doggo.inputSampleRate }}
+          - "--input-sample-rate={{ .Values.doggo.inputSampleRate }}"
+          {{ end }}
           {{ if .Values.doggo.outputSampleRate }}
           - "--output-sample-rate={{ .Values.doggo.outputSampleRate }}"
           {{ end }}
