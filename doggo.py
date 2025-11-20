@@ -57,6 +57,15 @@ class Trick:
     async def act(self, params):
         pass
 
+    async def call_robot(self, api_id, params=None):
+        args = {'api_id': api_id}
+        if params:
+            args['parameter'] = params
+        await self.dog.maybe_reconnect()
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], args
+        )
+
     def tool(self):
         return Tool(
             name=self.name,
@@ -72,10 +81,7 @@ class StandUp(Trick):
         super().__init__(dog, "stand_up", "Make the dog stand up", "tools/empty.json")
 
     async def act(self, params):
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["StandUp"]}
-        )
+        await self.call_robot(SPORT_CMD["StandUp"])
         return "Doggo is now standing up"
 
 class Damp(Trick):
@@ -83,10 +89,7 @@ class Damp(Trick):
         super().__init__(dog, "lie_down", "Make the dog lie down", "tools/empty.json")
 
     async def act(self, params):
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Damp"]}
-        )
+        await self.call_robot(SPORT_CMD["Damp"])
         return "Doggo is now damping"
 
 class Hello(Trick):
@@ -94,10 +97,7 @@ class Hello(Trick):
         super().__init__(dog, "hello", "Make the dog say hello", "tools/empty.json")
 
     async def act(self, params):
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Hello"]}
-        )
+        await self.call_robot(SPORT_CMD["Hello"])
         return "Doggo is now saying hello"
 
 class Move(Trick):
@@ -105,10 +105,7 @@ class Move(Trick):
         super().__init__(dog, "move", "Make the dog move", "tools/move.json")
 
     async def act(self, params):
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Move"], "parameter": params}
-        )
+        await self.call_robot(SPORT_CMD["Move"], params)
         return "Doggo is now moving"
 
 class Stop(Trick):
@@ -116,10 +113,7 @@ class Stop(Trick):
         super().__init__(dog, "stop", "Make the dog stop", "tools/empty.json")
 
     async def act(self, params):
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Stop"]}
-        )
+        await self.call_robot(SPORT_CMD["Stop"])
         return "Doggo is now stopping"
 
 class Dance(Trick):
@@ -127,10 +121,7 @@ class Dance(Trick):
         super().__init__(dog, "dance", "Make the dog dance", "tools/empty.json")
 
     async def act(self, params):
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Dance1"]}
-        )
+        await self.call_robot(SPORT_CMD["Dance1"])
         return "Doggo is now dancing"
 
 class Jump(Trick):
@@ -138,10 +129,7 @@ class Jump(Trick):
         super().__init__(dog, "jump", "Make the dog jump", "tools/empty.json")
 
     async def act(self, params):
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["FrontJump"]}
-        )
+        await self.call_robot(SPORT_CMD["FrontJump"])
         return "Doggo is now jumping"
 
 def trick_tools(dog):
