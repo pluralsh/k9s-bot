@@ -68,7 +68,7 @@ class Trick:
 
 class StandUp(Trick):
     def __init__(self, dog):
-        super().__init__(dog, "stand_up", "Make the dog stand up", "tools/stand_up.json")
+        super().__init__(dog, "stand_up", "Make the dog stand up", "tools/empty.json")
 
     async def act(self, params):
         await self.dog.maybe_reconnect()
@@ -79,7 +79,7 @@ class StandUp(Trick):
 
 class Damp(Trick):
     def __init__(self, dog):
-        super().__init__(dog, "lie_down", "Make the dog lie down", "tools/lie_down.json")
+        super().__init__(dog, "lie_down", "Make the dog lie down", "tools/empty.json")
 
     async def act(self, params):
         await self.dog.maybe_reconnect()
@@ -90,7 +90,7 @@ class Damp(Trick):
 
 class Hello(Trick):
     def __init__(self, dog):
-        super().__init__(dog, "hello", "Make the dog say hello", "tools/hello.json")
+        super().__init__(dog, "hello", "Make the dog say hello", "tools/empty.json")
 
     async def act(self, params):
         await self.dog.maybe_reconnect()
@@ -112,7 +112,7 @@ class Move(Trick):
 
 class Stop(Trick):
     def __init__(self, dog):
-        super().__init__(dog, "stop", "Make the dog stop", "tools/stop.json")
+        super().__init__(dog, "stop", "Make the dog stop", "tools/empty.json")
 
     async def act(self, params):
         await self.dog.maybe_reconnect()
@@ -332,7 +332,7 @@ async def loop(dog):
 
 
 @click.command()
-@click.option("--voice", type=click.Choice(VOICES.keys()), default="michael")
+@click.option("--voice", type=click.Choice(VOICES.keys()), default="burt")
 @click.option("--alive/--dead", is_flag=True, default=True)
 @click.option("--configure-input/--no-configure-input", is_flag=True, default=False)
 @click.option("--input-sample-rate", type=int, default=44100)
