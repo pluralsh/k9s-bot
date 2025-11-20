@@ -31,8 +31,6 @@ VOICES = {
     "michael": "ldTgmMTsxAK2Vs3NZO03"
 }
 
-from unitree_webrtc_connect.constants import RTC_TOPIC, SPORT_CMD
-
 class Tool:
     def __init__(self, name, description, filepath, callback, awake=True):
         self.name = name
