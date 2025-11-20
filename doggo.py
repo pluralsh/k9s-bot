@@ -132,6 +132,14 @@ class Jump(Trick):
         await self.call_robot(SPORT_CMD["FrontJump"])
         return "Doggo is now jumping"
 
+class Stretch(Trick):
+    def __init__(self, dog):
+        super().__init__(dog, "stretch", "Make the dog stretch", "tools/empty.json")
+
+    async def act(self, params):
+        await self.call_robot(SPORT_CMD["Stretch"])
+        return "Doggo is now stretching"
+
 def trick_tools(dog):
     tricks = [
         StandUp(dog),
@@ -141,6 +149,7 @@ def trick_tools(dog):
         Stop(dog),
         Dance(dog),
         Jump(dog),
+        Stretch(dog),
     ]
     return [trick.tool() for trick in tricks]
 
