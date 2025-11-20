@@ -283,6 +283,7 @@ async def loop(dog):
         if text:
             print("Heard: ", text)
             await dog.think(text)
+        await asyncio.sleep(0.1)
 
 
 @click.command()
