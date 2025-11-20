@@ -224,7 +224,8 @@ class Doggo:
         audio = sd.rec(int(RECORDING_DURATION * sd.default.samplerate), channels=1, samplerate=sd.default.samplerate)
         sd.wait()
 
-        # audio = librosa.resample(audio, orig_sr=sd.default.samplerate, target_sr=16000)
+        # if sd.default.samplerate != 16000:
+        #     audio = librosa.resample(audio, orig_sr=sd.default.samplerate, target_sr=16000)
 
         bytes_io = BytesIO()
         bytes_io.name = "audio.mp3"
