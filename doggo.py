@@ -62,7 +62,7 @@ class Trick:
         if params:
             args["parameter"] = params
 
-        def _call():
+        async def _call():
             await self.dog.maybe_reconnect()
             await self.dog.robot.datachannel.pub_sub.publish_request_new(
                 RTC_TOPIC["SPORT_MOD"], args
