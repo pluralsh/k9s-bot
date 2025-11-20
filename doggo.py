@@ -222,7 +222,7 @@ class Doggo:
         audio = sd.rec(int(RECORDING_DURATION * sd.default.samplerate), channels=1, samplerate=sd.default.samplerate)
         sd.wait()
 
-        audio = librosa.resample(audio, orig_sr=sd.default.samplerate, target_sr=16000)
+        # audio = librosa.resample(audio, orig_sr=sd.default.samplerate, target_sr=16000)
 
         bytes_io = BytesIO()
         bytes_io.name = "audio.mp3"
@@ -240,6 +240,7 @@ class Doggo:
             model_id="scribe_v1",
             language_code="en",  # or whichever model you require
         )
+        print("Result: ", result.text)
         return result.text
 
     async def speak(self, text):
@@ -248,7 +249,7 @@ class Doggo:
         await loop.run_in_executor(None, self._speak_sync, text)
 
     def _speak_sync(self, text):
-        click.echo("Speaking: ", text)
+        print("Speaking: ", text)
         response = self.elevenlabs.text_to_speech.convert(
             voice_id=self.voice_id,
             output_format="mp3_22050_32",
@@ -274,7 +275,7 @@ async def loop(dog):
     while True:
         text = await dog.listen()
         if text:
-            click.echo("Heard: ", text)
+            print("Heard: ", text)
             await dog.think(text)
 
 
