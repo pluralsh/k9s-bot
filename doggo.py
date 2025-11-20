@@ -60,11 +60,15 @@ class Trick:
     async def call_robot(self, api_id, params=None):
         args = {'api_id': api_id}
         if params:
-            args['parameter'] = params
-        await self.dog.maybe_reconnect()
-        await self.dog.robot.datachannel.pub_sub.publish_request_new(
-            RTC_TOPIC["SPORT_MOD"], args
-        )
+            args["parameter"] = params
+
+        async def _call():
+            await self.dog.maybe_reconnect()
+            await self.dog.robot.datachannel.pub_sub.publish_request_new(
+                RTC_TOPIC["SPORT_MOD"], args
+            )
+
+        asyncio.create_task(_call())
 
     def tool(self):
         return Tool(
