@@ -28,7 +28,8 @@ VOICES = {
     "drill_seargent": "DGzg6RaUqxGRTHSBjfgF",
     "knox": "dPah2VEoifKnZT37774q",
     "pirate": "PPzYpIqttlTYA83688JI",
-    "michael": "ldTgmMTsxAK2Vs3NZO03"
+    "michael": "ldTgmMTsxAK2Vs3NZO03",
+    "scottish": "y6p0SvBlfEe2MH4XN7BP"
 }
 
 class Tool:
@@ -121,6 +122,28 @@ class Stop(Trick):
         )
         return "Doggo is now stopping"
 
+class Dance(Trick):
+    def __init__(self, dog):
+        super().__init__(dog, "dance", "Make the dog dance", "tools/empty.json")
+
+    async def act(self, params):
+        await self.dog.maybe_reconnect()
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["Dance"]}
+        )
+        return "Doggo is now dancing"
+
+class Jump(Trick):
+    def __init__(self, dog):
+        super().__init__(dog, "jump", "Make the dog jump", "tools/empty.json")
+
+    async def act(self, params):
+        await self.dog.maybe_reconnect()
+        await self.dog.robot.datachannel.pub_sub.publish_request_new(
+            RTC_TOPIC["SPORT_MOD"], {"api_id": SPORT_CMD["FrontJump"]}
+        )
+        return "Doggo is now jumping"
+
 def trick_tools(dog):
     tricks = [
         StandUp(dog),
@@ -128,6 +151,8 @@ def trick_tools(dog):
         Hello(dog),
         Move(dog),
         Stop(dog),
+        Dance(dog),
+        Jump(dog),
     ]
     return [trick.tool() for trick in tricks]
 
