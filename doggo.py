@@ -9,6 +9,7 @@ import os
 import json
 import click
 import librosa
+import httpx
 from unitree_webrtc_connect.webrtc_driver import (
     UnitreeWebRTCConnection,
     WebRTCConnectionMethod,
@@ -20,6 +21,10 @@ from io import BytesIO
 ROBOT_IP = "192.168.50.191"
 
 OPENAI_MODEL = "gpt-4.1-mini"
+
+PLURAL_CONSOLE_URL = os.getenv("PLURAL_CONSOLE_URL", "https://console.plrldemo.onplural.sh")
+PLURAL_GQL_ENDPOINT = f"{PLURAL_CONSOLE_URL}/gql"
+
 RECORDING_DURATION = 2
 # sd.default.samplerate = 16000
 
@@ -144,6 +149,94 @@ class Stretch(Trick):
         await self.call_robot(SPORT_CMD["Stretch"])
         return "Doggo is now stretching"
 
+
+class AskPlural:
+    """Tool for sending prompts to the Plural AI agent to manage infrastructure."""
+    
+    def __init__(self):
+        self.name = "ask_plural"
+        self.description = "Ask Plural AI to make infrastructure changes, like scaling databases, modifying deployments, or managing Kubernetes resources. Use this when the user wants to make changes to their cloud infrastructure."
+        self.file = "tools/plural.json"
+    
+    async def act(self, params):
+        if isinstance(params, str):
+            params = json.loads(params)
+        
+        prompt = params.get("prompt", "")
+        if not prompt:
+            return "Error: No prompt provided for Plural agent"
+        
+        pat = os.getenv("PLURAL_PAT")
+        if not pat:
+            return "Error: PLURAL_PAT environment variable is not set. Please set your Plural Personal Access Token."
+        
+        headers = {
+            "accept": "*/*",
+            "authorization": f"Token {pat}",
+            "content-type": "application/json",
+        }
+        
+        query = """mutation CreateAgentSession($attributes: AgentSessionAttributes!) {
+  createAgentSession(attributes: $attributes) {
+    id 
+  }
+}
+"""
+        
+        payload = {
+            "operationName": "CreateAgentSession",
+            "variables": {
+                "attributes": {
+                    "type": "TERRAFORM",
+                    "prompt": prompt
+                }
+            },
+            "query": query
+        }
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    PLURAL_GQL_ENDPOINT,
+                    headers=headers,
+                    json=payload,
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                result = response.json()
+                
+                # Check for GraphQL errors
+                if "errors" in result:
+                    error_messages = [e.get("message", "Unknown error") for e in result["errors"]]
+                    return f"Plural API returned errors: {', '.join(error_messages)}"
+                
+                # Extract session info from response
+                data = result.get("data", {})
+                session = data.get("createAgentSession", {})
+                
+                if session:
+                    session_id = session.get("id", "unknown")
+                    return f"Successfully created Plural agent session (ID: {session_id}). The agent is now processing your request: '{prompt}'"
+                else:
+                    return f"Request sent to Plural successfully, but no session data returned. Response: {json.dumps(result)}"
+                    
+        except httpx.HTTPStatusError as e:
+            return f"Error calling Plural API: HTTP {e.response.status_code} - {e.response.text}"
+        except httpx.RequestError as e:
+            return f"Error connecting to Plural API: {str(e)}"
+        except Exception as e:
+            return f"Unexpected error calling Plural API: {str(e)}"
+    
+    def tool(self):
+        return Tool(
+            name=self.name,
+            description=self.description,
+            filepath=self.file,
+            callback=self.act,
+            awake=True,
+        )
+
+
 def trick_tools(dog):
     tricks = [
         StandUp(dog),
@@ -191,6 +284,7 @@ class Doggo:
             )
         ]
         self.tools.extend(trick_tools(self))
+        self.tools.append(AskPlural().tool())
 
         self.asleep_prompt, self.awake_prompt = None, None
 

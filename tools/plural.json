@@ -1,0 +1,11 @@
+{
+    "type": "object",
+    "properties": {
+        "prompt": {
+            "type": "string",
+            "description": "The prompt to send to Plural AI agent, describing what infrastructure change you want to make"
+        }
+    },
+    "required": ["prompt"]
+}
+
