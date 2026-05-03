@@ -1,14 +1,12 @@
 import openai
 import asyncio
+import inspect
 import sounddevice as sd
-import soundfile as sf
 import elevenlabs
-import whisper
-import tempfile
 import os
 import json
 import click
-import librosa
+from audio import AudioIO
 from unitree_webrtc_connect.webrtc_driver import (
     UnitreeWebRTCConnection,
     WebRTCConnectionMethod,
@@ -16,14 +14,12 @@ from unitree_webrtc_connect.webrtc_driver import (
 from unitree_webrtc_connect.constants import RTC_TOPIC, SPORT_CMD
 from plural import AskPlural
 
-from io import BytesIO
-
 ROBOT_IP = "192.168.50.191"
 
 OPENAI_MODEL = "gpt-4.1-mini"
 
-RECORDING_DURATION = 2
-# sd.default.samplerate = 16000
+# STT often mistranscribes "k9s" — include common variants
+WAKE_WORDS = ["k9s", "k9", "k-9", "k nines", "canine", "cayenne", "k nine", "case"]
 
 VOICES = {
     "burt": "4YYIPFl9wE5c4L2eu2Gb",
@@ -31,8 +27,9 @@ VOICES = {
     "knox": "dPah2VEoifKnZT37774q",
     "pirate": "PPzYpIqttlTYA83688JI",
     "michael": "ldTgmMTsxAK2Vs3NZO03",
-    "scottish": "y6p0SvBlfEe2MH4XN7BP"
+    "scottish": "y6p0SvBlfEe2MH4XN7BP",
 }
+
 
 class Tool:
     def __init__(self, name, description, filepath, callback, awake=True):
@@ -47,7 +44,11 @@ class Tool:
             self.spec = json.load(f)
 
     async def run(self, params):
-        return await self.callback(params)
+        result = self.callback(params)
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
 
 class Trick:
     def __init__(self, dog, name, description, file):
@@ -55,12 +56,16 @@ class Trick:
         self.description = description
         self.file = file
         self.dog = dog
-    
+
     async def act(self, params):
         pass
 
     async def call_robot(self, api_id, params=None):
-        args = {'api_id': api_id}
+        if not self.dog.robot:
+            print(f"[no-dog] would call api_id={api_id} params={params}")
+            return
+
+        args = {"api_id": api_id}
         if params:
             args["parameter"] = params
 
@@ -90,6 +95,7 @@ class StandUp(Trick):
         await self.call_robot(SPORT_CMD["StandUp"])
         return "Doggo is now standing up"
 
+
 class Damp(Trick):
     def __init__(self, dog):
         super().__init__(dog, "lie_down", "Make the dog lie down", "tools/empty.json")
@@ -97,6 +103,7 @@ class Damp(Trick):
     async def act(self, params):
         await self.call_robot(SPORT_CMD["Damp"])
         return "Doggo is now damping"
+
 
 class Hello(Trick):
     def __init__(self, dog):
@@ -106,6 +113,7 @@ class Hello(Trick):
         await self.call_robot(SPORT_CMD["Hello"])
         return "Doggo is now saying hello"
 
+
 class Move(Trick):
     def __init__(self, dog):
         super().__init__(dog, "move", "Make the dog move", "tools/move.json")
@@ -113,6 +121,7 @@ class Move(Trick):
     async def act(self, params):
         await self.call_robot(SPORT_CMD["Move"], params)
         return "Doggo is now moving"
+
 
 class Stop(Trick):
     def __init__(self, dog):
@@ -122,6 +131,7 @@ class Stop(Trick):
         await self.call_robot(SPORT_CMD["Stop"])
         return "Doggo is now stopping"
 
+
 class Dance(Trick):
     def __init__(self, dog):
         super().__init__(dog, "dance", "Make the dog dance", "tools/empty.json")
@@ -130,6 +140,7 @@ class Dance(Trick):
         await self.call_robot(SPORT_CMD["Dance1"])
         return "Doggo is now dancing"
 
+
 class Jump(Trick):
     def __init__(self, dog):
         super().__init__(dog, "jump", "Make the dog jump", "tools/empty.json")
@@ -137,6 +148,7 @@ class Jump(Trick):
     async def act(self, params):
         await self.call_robot(SPORT_CMD["FrontJump"])
         return "Doggo is now jumping"
+
 
 class Stretch(Trick):
     def __init__(self, dog):
@@ -160,23 +172,32 @@ def trick_tools(dog):
     ]
     return [trick.tool() for trick in tricks]
 
+
 class Doggo:
     awake = True
     alive = True
 
-    def __init__(self, voice="michael", alive=True, output_sample_rate=48000, echo=False):
+    def __init__(
+        self,
+        voice="michael",
+        alive=True,
+        dog=True,
+        output_sample_rate=48000,
+        echo=False,
+        wake_word=True,
+    ):
         self.voice_id = VOICES[voice]
         self.alive = alive
         self.robot = None
-        self.echo = echo
-        self.output_sample_rate = output_sample_rate
 
-        if self.alive:
+        if self.alive and dog:
             self.robot = UnitreeWebRTCConnection(
                 WebRTCConnectionMethod.LocalSTA, ip=ROBOT_IP
             )
 
+        self.wake_word = wake_word
         self.elevenlabs = elevenlabs.ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+        self.audio = AudioIO(self.voice_id, self.elevenlabs, output_sample_rate, echo)
         self.openai = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.tools = [
             Tool(
@@ -190,8 +211,8 @@ class Doggo:
                 "sleep",
                 "Put the doggo to sleep",
                 "tools/sleep.json",
-                lambda _: self.toggle_sleep(True)
-            )
+                lambda _: self.toggle_sleep(True),
+            ),
         ]
         self.tools.extend(trick_tools(self))
         self.tools.append(AskPlural().tool(Tool))
@@ -208,8 +229,14 @@ class Doggo:
         if self.robot:
             await self.robot.connect()
 
+    def has_wake_word(self, text: str) -> bool:
+        if not self.wake_word:
+            return True
+        text_lower = text.lower()
+        return any(w in text_lower for w in WAKE_WORDS)
+
     def toggle_sleep(self, sleep):
-        self.awake = sleep
+        self.awake = not sleep
         if sleep:
             return "Doggo is now sleeping"
         return "Doggo is now awake"
@@ -223,16 +250,20 @@ class Doggo:
         return [tool for tool in self.tools if tool.awake == self.awake]
 
     async def think(self, text):
+        self.audio.reset()
         messages = [
             {"role": "system", "content": self.system_prompt()},
             {"role": "user", "content": text},
         ]
 
         i = 0
-        while await self.run_completion(messages) and self.awake and i < 5:
+        while await self.run_completion(messages) and self.awake and not self.audio.interrupted and i < 5:
             i += 1
 
     async def run_completion(self, messages):
+        if self.audio.interrupted:
+            return False
+
         tools = self.valid_tools()
         by_name = {tool.name: tool for tool in tools}
         response = self.openai.chat.completions.create(
@@ -255,6 +286,8 @@ class Doggo:
         if choice.message.content:
             messages.append({"role": "assistant", "content": choice.message.content})
             await self.speak(choice.message.content)
+            if self.audio.interrupted:
+                return False
 
         if choice.message.tool_calls:
             call_messages = [
@@ -287,70 +320,14 @@ class Doggo:
     async def listen(self):
         if not self.alive:
             return None
-
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self._listen_sync)
-
-    def _listen_sync(self):
-        print("Listening...")
-        audio = sd.rec(int(RECORDING_DURATION * sd.default.samplerate), channels=1, samplerate=sd.default.samplerate)
-        sd.wait()
-
-        if self.echo:
-            sd.play(audio, sd.default.samplerate)
-            sd.wait()
-        # if sd.default.samplerate != 16000:
-        #     audio = librosa.resample(audio, orig_sr=sd.default.samplerate, target_sr=16000)
-
-        bytes_io = BytesIO()
-        bytes_io.name = "audio.mp3"
-        sf.write(
-            bytes_io,
-            audio,
-            sd.default.samplerate,
-            bitrate_mode="CONSTANT",
-            compression_level=0.99,
-        )
-        bytes_io.seek(0)
-        # Use ElevenLabs speech-to-text instead of local Whisper
-        result = self.elevenlabs.speech_to_text.convert(
-            file=bytes_io,
-            model_id="scribe_v1",
-            language_code="en",  # or whichever model you require
-        )
-        print("Result: ", result.text)
-        return result.text
+        return await loop.run_in_executor(None, self.audio.listen)
 
     async def speak(self, text):
-        print("Speaking: ", text)
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._speak_sync, text)
-
-    def _speak_sync(self, text):
         if not self.awake:
             return
-        
-        print("Speaking: ", text)
-        response = self.elevenlabs.text_to_speech.convert(
-            voice_id=self.voice_id,
-            output_format="mp3_22050_32",
-            text=text,
-            model_id="eleven_turbo_v2_5",
-        )
-
-        mp3_bytes = BytesIO()
-        mp3_bytes.name = "audio.mp3"
-        for chunk in response:
-            if chunk:
-                mp3_bytes.write(chunk)
-        mp3_bytes.seek(0)
-
-        data, samplerate = sf.read(mp3_bytes)
-        if self.output_sample_rate > 0:
-            print("Resampling from ", samplerate, " to ", self.output_sample_rate)
-            data = librosa.resample(data, orig_sr=samplerate, target_sr=self.output_sample_rate)
-        sd.play(data, self.output_sample_rate or samplerate)
-        sd.wait()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.audio.speak, text)
 
 
 async def loop(dog):
@@ -359,8 +336,11 @@ async def loop(dog):
     while True:
         text = await dog.listen()
         if text:
-            print("Heard: ", text)
-            await dog.think(text)
+            if dog.has_wake_word(text):
+                print("Heard:", text)
+                await dog.think(text)
+            else:
+                print("Ignored (no wake word):", text)
         await asyncio.sleep(0.1)
 
 
@@ -373,7 +353,20 @@ async def loop(dog):
 @click.option("--input-device", type=str, default="USB PnP")
 @click.option("--output-device", type=str, default="UACDemo")
 @click.option("--echo/--no-echo", is_flag=True, default=False)
-def main(voice, alive, configure_input, input_sample_rate, output_sample_rate, input_device, output_device, echo):
+@click.option("--dog/--no-dog", is_flag=True, default=True)
+@click.option("--wake-word/--no-wake-word", is_flag=True, default=True)
+def main(
+    voice,
+    alive,
+    configure_input,
+    input_sample_rate,
+    output_sample_rate,
+    input_device,
+    output_device,
+    echo,
+    dog,
+    wake_word,
+):
     if configure_input:
         sd.default.device = (input_device, output_device)
     if input_sample_rate > 0:
@@ -382,7 +375,7 @@ def main(voice, alive, configure_input, input_sample_rate, output_sample_rate, i
     print("Number of devices: ", len(devices))
     print("Devices: ", json.dumps(devices, indent=2))
 
-    dog = Doggo(voice, alive, output_sample_rate, echo)
+    dog = Doggo(voice, alive, dog, output_sample_rate, echo, wake_word)
     asyncio.run(loop(dog))
 
 
